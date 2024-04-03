@@ -1,17 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ArrayOfTask xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Tasks>
   <Task>
-    <name>Написати курсову роботу</name>
-    <description>Пишите від руки на аркуші паперу А4 формату, НЕ СПИСУВАТИ З ЧАТА GPT</description>
-    <deadline>2023-01-25T00:00:00</deadline>
-    <priority>High</priority>
-    <status>notDone</status>
+    <ID>1</ID>
+    <Name>123</Name>
+    <Description>123</Description>
+    <Deadline>1111-11-11</Deadline>
+    <Priority>Low</Priority>
+    <Status>New</Status>
   </Task>
   <Task>
-    <name>Дз</name>
-    <description>Доробити дз котре ще не доробили</description>
-    <deadline>2024-04-05T00:00:00</deadline>
-    <priority>Medium</priority>
-    <status>notDone</status>
+    <ID>2</ID>
+    <Name>11111</Name>
+    <Description>111111</Description>
+    <Deadline>1111-11-11</Deadline>
+    <Priority>Low</Priority>
+    <Status>Completed</Status>
   </Task>
-</ArrayOfTask>
+  <Task>
+    <ID>3</ID>
+    <Name>1111</Name>
+    <Description>1111</Description>
+    <Deadline>1111-11-11</Deadline>
+    <Priority>High</Priority>
+    <Status>InProgress</Status>
+  </Task>
+</Tasks>

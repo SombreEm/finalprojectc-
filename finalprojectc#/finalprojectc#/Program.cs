@@ -7,99 +7,247 @@ using System.Xml;
 using System.IO;
 using System.Xml.Serialization;
 using static finalprojectc_.Task;
+using System.Xml.Linq;
 
 namespace finalprojectc_
 {
 
     public class Task
     {
-        public string name { get; set; }
-        public string description { get; set; }
-        public DateTime deadline { get; set; }
+        public string ID { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public DateTime Deadline { get; set; }
         public Priority priority { get; set; }
         public Status status { get; set; }
+
         public enum Priority
         {
             Low,
             Medium,
             High
         }
+
         public enum Status
         {
-            Done,
-            notDone
-        }
-        public Task(){ }
-        public Task(string name, string description, DateTime deadline, Priority priority)
-        {
-            this.name = name;
-            this.description = description;
-            this.deadline = deadline;
-            this.priority = priority;
-            status = Status.notDone;
+            New,
+            InProgress,
+            Completed
         }
 
+        public Task(string name, string description, DateTime deadline, Priority priority, Status status)
+        {
+            this.ID = IdGenerator.GenerateId();
+            this.Name = name;
+            this.Description = description;
+            this.Deadline = deadline;
+            this.priority = priority;
+            this.status = status;
+        }
         public override string ToString()
         {
-            return $"Назва: {name}\nОпис: {description}\nДедлайн: {deadline.ToString("yyyy.MM.dd")}\nПріоритет: {priority}\nСтатус: {status}";
+            return $"\nID: {ID},\n Назва: {Name},\n Опис: {Description},\n Дедлайн: {Deadline:yyyy-MM-dd},\n Пріоритет: {priority},\n Статус: {status}";
         }
     }
+
+    public class IdGenerator
+    {
+        private static long lastId = 0; 
+        public static string GenerateId()
+        {
+            long id = lastId;
+            if (id <= lastId)
+            {
+                id = lastId + 1;
+            }
+            lastId = id;
+            return id.ToString();
+        }
+    }
+
     public class TaskPlanner
     {
-        private List<Task> tasks = new List<Task>();
-        public void addTask(Task task)
+        private List<Task> tasks;
+        private string xmlFilePath;
+
+        public TaskPlanner(string filePath)
         {
-            tasks.Add(task);
+            xmlFilePath = filePath;
+            tasks = new List<Task>();
         }
-        public void deleteTask(Task task)
+
+        public void AddTask()
         {
-            tasks.Remove(task);
+            Console.WriteLine("Введіть дані завдання:");
+            Console.Write("Назва завдання: ");
+            string name = Console.ReadLine();
+            Console.Write("Опис завдання: ");
+            string description = Console.ReadLine();
+            Console.Write("Дедлайн (у форматі yyyy-MM-dd): ");
+            DateTime deadline = DateTime.Parse(Console.ReadLine());
+            Console.Write("Пріоритет (0 - Low, 1 - Medium, 2 - High): ");
+            int priority = int.Parse(Console.ReadLine());
+            Console.Write("Статус (0 - New, 1 - InProgress, 2 - Completed): ");
+            int status = int.Parse(Console.ReadLine());
+
+            tasks.Add(new Task(
+                name,
+                description,
+                deadline,
+                (Task.Priority)priority,
+                (Task.Status)status
+            ));
+
+            SaveTasks();
+            Console.WriteLine("Новий запис успішно створено.");
         }
-        public void editTask(Task task, string newName, string newDescription, DateTime newDeadline, Priority newPriority, Status newStatus)
+
+        public void DeleteTask(string id)
         {
-            task.name = newName;
-            task.description = newDescription;
-            task.deadline = newDeadline;
-            task.priority = newPriority;
-            task.status = newStatus;
-        }
-        public void saveTask(string task)
-        {
-            XmlSerializer serializer = new XmlSerializer(typeof(List<Task>));
-            using (StreamWriter text = new StreamWriter(task))
+            Task taskToRemove = tasks.Find(t => t.ID == id);
+            if (taskToRemove != null)
             {
-                serializer.Serialize(text, tasks);
+                tasks.Remove(taskToRemove);
+                SaveTasks();
+                Console.WriteLine("Запис успішно видалено.");
             }
         }
-        public List<Task> loadTask(string task)
+
+        public void EditTask(string id, Task newTaskData)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(List<Task>));
-            using (StreamReader text = new StreamReader(task))
+            Task taskToEdit = tasks.Find(t => t.ID == id);
+            if (taskToEdit != null)
             {
-                return (List<Task>)serializer.Deserialize(text);
+                taskToEdit.Name = newTaskData.Name;
+                taskToEdit.Description = newTaskData.Description;
+                taskToEdit.Deadline = newTaskData.Deadline;
+                taskToEdit.priority = newTaskData.priority;
+                taskToEdit.status = newTaskData.status;
+                SaveTasks();
+                Console.WriteLine("Запис успішно відредаговано.");
             }
         }
-        public void printTasks()
+
+        private void SaveTasks()
         {
-            foreach (Task task in tasks)
+            XDocument doc = new XDocument(
+                new XElement("Tasks",
+                    from task in tasks
+                    select new XElement("Task",
+                        new XElement("ID", task.ID),
+                        new XElement("Name", task.Name),
+                        new XElement("Description", task.Description),
+                        new XElement("Deadline", task.Deadline.ToString("yyyy-MM-dd")),
+                        new XElement("Priority", task.priority),
+                        new XElement("Status", task.status)
+                    )
+                )
+            );
+            doc.Save(xmlFilePath);
+        }
+
+        public void LoadTasks()
+        {
+            if (File.Exists(xmlFilePath))
+            {
+                XDocument doc = XDocument.Load(xmlFilePath);
+                tasks = (from taskElement in doc.Descendants("Task")
+                         select taskElement.Element("ID") != null ?
+                             new Task(
+                                 taskElement.Element("Name").Value,
+                                 taskElement.Element("Description").Value,
+                                 DateTime.Parse(taskElement.Element("Deadline").Value),
+                                 (Task.Priority)Enum.Parse(typeof(Task.Priority), taskElement.Element("Priority").Value),
+                                 (Task.Status)Enum.Parse(typeof(Task.Status), taskElement.Element("Status").Value)
+                             ) : null
+                         )
+                .ToList();
+            }
+        }
+
+        public void DisplayTasks()
+        {
+            foreach (var task in tasks)
             {
                 Console.WriteLine(task);
-                Console.WriteLine();
             }
         }
     }
+
     internal class Program
     {
         static void Main(string[] args)
         {
-            TaskPlanner exercise = new TaskPlanner();
-            exercise.addTask(new Task("Написати курсову роботу", "Пишите від руки на аркуші паперу А4 формату, НЕ СПИСУВАТИ З ЧАТА GPT", new DateTime(2023, 01, 25), Task.Priority.High));
-            exercise.addTask(new Task("Дз", "Доробити дз котре ще не доробили", new DateTime(2024, 04, 5), Task.Priority.Medium));
-            exercise.saveTask("tasks.xml");
-            exercise.printTasks();
-            List<Task> tasks = exercise.loadTask("tasks.xml");
-            exercise.editTask(tasks[0], "Написати курсову роботу", "Пишите від руки на аркуші паперу А4 формату, НЕ СПИСУВАТИ З ЧАТА GPT", new DateTime(2023, 01, 26), Task.Priority.Low, Task.Status.Done);
-            exercise.deleteTask(tasks[1]);
+            string xmlFilePath = "tasks.xml";
+            Console.WriteLine("Файл знайдено. Зчитування даних...");
+
+            TaskPlanner taskPlanner = new TaskPlanner(xmlFilePath);
+            taskPlanner.LoadTasks();
+
+            while (true)
+            {
+                Console.WriteLine("\nОберіть опцію:");
+                Console.WriteLine("1. Додати завдання");
+                Console.WriteLine("2. Редагувати завдання");
+                Console.WriteLine("3. Видалити завдання");
+                Console.WriteLine("4. Показати всі завдання");
+                Console.WriteLine("5. Вийти");
+
+                string choice = Console.ReadLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        Console.WriteLine("\nДодавання нового завдання...");
+                        taskPlanner.AddTask();
+                        break;
+                    case "2":
+                        Console.WriteLine("\nРедагування завдання...");
+                        Console.Write("Введіть ID завдання для редагування: ");
+                        string taskIdToEdit = Console.ReadLine();
+                        Task editedTask = CreateTask();
+                        taskPlanner.EditTask(taskIdToEdit, editedTask);
+                        break;
+                    case "3":
+                        Console.WriteLine("\nВидалення завдання...");
+                        Console.Write("Введіть ID завдання для видалення: ");
+                        string taskIdToDelete = Console.ReadLine();
+                        taskPlanner.DeleteTask(taskIdToDelete);
+                        break;
+                    case "4":
+                        Console.WriteLine("\nПоказ усіх завдань:");
+                        taskPlanner.DisplayTasks();
+                        break;
+                    case "5":
+                        Console.WriteLine("\nЗавершення програми.");
+                        return;
+                    default:
+                        Console.WriteLine("\nНевірний вибір. Будь ласка, виберіть опцію знову.");
+                        break;
+                }
+            }
+        }
+
+        static Task CreateTask()
+        {
+            Console.WriteLine("Введіть дані завдання:");
+            Console.Write("Назва завдання: ");
+            string name = Console.ReadLine();
+            Console.Write("Опис завдання: ");
+            string description = Console.ReadLine();
+            Console.Write("Дедлайн (у форматі yyyy-MM-dd): ");
+            DateTime deadline = DateTime.Parse(Console.ReadLine());
+            Console.Write("Пріоритет (0 - Low, 1 - Medium, 2 - High): ");
+            int priority = int.Parse(Console.ReadLine());
+            Console.Write("Статус (0 - New, 1 - InProgress, 2 - Completed): ");
+            int status = int.Parse(Console.ReadLine());
+            return new Task(
+                name,
+                description,
+                deadline,
+                (Task.Priority)priority,
+                (Task.Status)status
+            );
         }
     }
 }
